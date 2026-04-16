@@ -1,0 +1,34 @@
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  review_details: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "[SKIP REVIEW]"
+
+  path_filters:
+    - "!**/*.Designer.cs"
+    - "!**/Migrations/**"
+    - "!**/*.generated.cs"
+    - "!**/wwwroot/lib/**"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+
+chat:
+  auto_reply: true
