@@ -12,8 +12,7 @@ app.MapGet("/health", () => new
     timestamp = DateTimeOffset.UtcNow,
     version = "1.0.0"
 })
-.WithName("GetHealth")
-.WithOpenApi();
+.WithName("GetHealth");
 
 app.MapScalarApiReference();
 
