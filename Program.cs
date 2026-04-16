@@ -57,6 +57,7 @@ builder.Services.AddScoped<ProfileManagementOrchestrationService>();
 
 // Add logging
 builder.Services.AddLogging();
+builder.Services.AddOpenApi();
 
 // Add controllers
 builder.Services.AddControllers();
@@ -91,6 +92,7 @@ app.MapGet("/health", () => new
 })
 .WithName("GetHealth");
 
+app.MapOpenApi();
 app.MapScalarApiReference();
 
 app.Run();
