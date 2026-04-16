@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue create --title 'Setup CodeRabbit AI code review' --body ' *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'chore: apply CodeRabbit best-practice configuration' --body ' *)",
+      "Bash(gh pr *)"
+    ]
+  }
+}
