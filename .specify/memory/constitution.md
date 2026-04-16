@@ -1,12 +1,13 @@
 <!-- Sync Impact Report
-Version change: (template) → 1.0.0
-Added principles: Naming Conventions, Layered Architecture, Method Design, Code Clarity, Testing Discipline
-Modified: all placeholders replaced
+Version change: 1.0.0 → 1.1.0
+Modified principles: none (titles unchanged)
+Added sections: "Git Commit & PR Discipline" paragraph under Development Workflow
+Removed sections: none
 Templates requiring updates:
   ✅ .specify/memory/constitution.md (this file)
-  ⚠ .specify/templates/plan-template.md (verify principle references)
-  ⚠ .specify/templates/spec-template.md (verify principle references)
-  ⚠ .specify/templates/tasks-template.md (verify principle references)
+  ✅ .specify/templates/plan-template.md (no changes required — git workflow not referenced)
+  ✅ .specify/templates/spec-template.md (no changes required — workflow-agnostic)
+  ✅ .specify/templates/tasks-template.md (no changes required — task structure unaffected)
 Deferred: TODO(GOVERNANCE_AMENDMENT_HISTORY): no prior amendments yet
 Reference: https://github.com/hassanhabib/CSharpCodingStandard
 -->
@@ -17,10 +18,10 @@ Reference: https://github.com/hassanhabib/CSharpCodingStandard
 
 ### I. Naming Conventions
 
-**Files** — PascalCase with `.cs` extension. Partial class files use dot-notation: `StudentService.Validations.cs`.  
-**Classes** — Models: no suffix (`Student`). Services: singular (`StudentService`). Brokers: singular (`StudentBroker`). Controllers: plural (`StudentsController`).  
-**Fields** — camelCase; no underscores; reference private fields with `this.`.  
-**Variables** — Full descriptive names; no abbreviations (`student`, not `s` or `stdnt`). Collections use plurals, not `studentList`. Null/default values named `noStudent = null`.  
+**Files** — PascalCase with `.cs` extension. Partial class files use dot-notation: `StudentService.Validations.cs`.
+**Classes** — Models: no suffix (`Student`). Services: singular (`StudentService`). Brokers: singular (`StudentBroker`). Controllers: plural (`StudentsController`).
+**Fields** — camelCase; no underscores; reference private fields with `this.`.
+**Variables** — Full descriptive names; no abbreviations (`student`, not `s` or `stdnt`). Collections use plurals, not `studentList`. Null/default values named `noStudent = null`.
 **Methods** — MUST contain a verb. Async methods MUST be postfixed with `Async`. Parameters MUST be explicit about what they represent (`studentName`, not `name` or `text`).
 
 ### II. Layered Architecture (Broker → Service → Controller)
@@ -66,6 +67,17 @@ No layer may skip or bypass another. Dependencies flow in one direction: Control
 - Spec-kit workflow (specify → plan → tasks → implement) MUST be followed for every non-trivial feature.
 - Branch naming follows spec-kit sequential convention: `feature/<sequential-number>-<description>`.
 
+### Git Commit & PR Discipline
+
+Direct commits to `master` are STRICTLY FORBIDDEN. Every change — no matter how small — MUST follow this sequence:
+
+1. **Open a GitHub issue** describing the intent and scope of every change before any code is written. The issue is the source of truth for what is being changed and why.
+2. **Work on a feature branch** branched from `master`, named following the spec-kit sequential convention.
+3. **Create a Pull Request** from the feature branch targeting `master`. The PR description MUST include a condensed summary of the AI prompts used or a distilled chat history that led to the implementation, so reviewers understand the reasoning and decisions made during development.
+4. **Never push directly to `master`**. The only path to `master` is a reviewed and approved PR. Force-pushing to `master` is also forbidden.
+
+This discipline ensures full traceability: every line of code on `master` traces back to an issue (intent), a PR (review), and an AI-assisted reasoning trail (context).
+
 ## Governance
 
 This constitution supersedes all other coding guidance. Amendments require:
@@ -75,4 +87,4 @@ This constitution supersedes all other coding guidance. Amendments require:
 
 All PRs and code reviews MUST verify compliance with the principles above.
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-16 | **Last Amended**: 2026-04-16
+**Version**: 1.1.0 | **Ratified**: 2026-04-16 | **Last Amended**: 2026-04-16
