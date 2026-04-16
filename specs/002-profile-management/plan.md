@@ -11,8 +11,8 @@ Central user profile management system for Markwell educational platform using A
 
 **Language/Version**: C# 13, .NET 10.0 LTS  
 **Primary Dependencies**: ASP.NET Core 10.0, EF Core 10.0, ASP.NET Core Identity, Scalar.AspNetCore 2.14.0  
-**Storage**: EF Core with relational database (SQL Server or PostgreSQL - [NEEDS CLARIFICATION: choice between SQL Server, PostgreSQL, or SQLite for this feature])  
-**Testing**: xUnit for unit tests, Moq for mocking, TestContainers or SQLite for integration test databases  
+**Storage**: EF Core with PostgreSQL (dev + production) and SQLite (local + testing)  
+**Testing**: xUnit for unit tests, Moq for mocking, SQLite in-memory for integration test databases  
 **Target Platform**: .NET 10.0 LTS on Linux or Windows servers  
 **Project Type**: Web API service  
 **Performance Goals**: 

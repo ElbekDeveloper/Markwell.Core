@@ -10,25 +10,38 @@
 
 **NEEDS CLARIFICATION Resolved**: Storage database choice between SQL Server, PostgreSQL, or SQLite
 
-**Decision: SQL Server (via LocalDB for development) with PostgreSQL as production-ready option**
+**Decision: PostgreSQL (development + production) with SQLite for local/testing environments**
 
 **Rationale**: 
-- SQL Server with Entity Framework Core Identity is the most common Microsoft stack pairing for ASP.NET Core applications
-- LocalDB provides zero-configuration development database (already installed on Windows dev machines)
-- PostgreSQL provides open-source, portable production database with excellent EF Core support
-- Both are well-supported by migrations and have mature tooling
+- PostgreSQL provides consistent database across development and production (eliminates dev/prod parity issues)
+- Open-source and portable; runs on Windows, Linux, macOS with identical behavior
+- Excellent EF Core support with comprehensive tooling and migrations
+- SQLite for local development and fast unit tests (in-memory, zero configuration, no external dependencies)
+- Avoids SQL Server licensing and platform-specific tooling overhead
+- Educational platform benefits from platform-independent solution
 
 **Alternatives Considered**:
-- **SQLite**: Rejected for production due to lack of concurrent write support (educational platform may have simultaneous user creation during registration periods)
-- **MariaDB/MySQL**: Rejected; PostgreSQL offers same benefits with better EF Core integration
+- **SQL Server LocalDB**: Rejected; Windows-specific, introduces dev/prod divergence
+- **SQLite for production**: Rejected; lacks concurrent write support for production workloads
+- **MariaDB/MySQL**: Not selected; PostgreSQL offers superior JSON support and features
 
 **Implementation Approach**:
-- Development: Use SQL Server LocalDB (connection string: `Server=(localdb)\mssqllocaldb;Database=Markwell.Core;Trusted_Connection=true;`)
-- Testing: Use SQLite in-memory database for fast unit test execution
-- Production: Target PostgreSQL (connection string managed via environment variables)
-- EF Core DbContext supports provider-agnostic design; single codebase works across all three
+- **Local Development**: SQLite in-memory database for rapid iteration
+  - Connection string: `Data Source=:memory:;`
+  - Auto-created on startup via `database.EnsureCreated()`
+  - Resets on application restart (suitable for development)
 
-**Decision Artifact**: EF Core provider dependency: `Microsoft.EntityFrameworkCore.SqlServer` (v10.0) for development
+- **Integration Tests**: SQLite file-based (temporary, recreated per test suite)
+  - Connection string: `Data Source=test_{Guid}.db;`
+  - Cleaned up after test completion
+
+- **Development & Production**: PostgreSQL with connection string management
+  - Development: `Host=localhost;Database=markwell_core_dev;Username=postgres;Password=<local>;`
+  - Production: Connection string from environment variables (managed by infrastructure)
+
+- **EF Core Configuration**: Provider-agnostic DbContext with runtime provider selection
+
+**Decision Artifact**: EF Core provider dependencies: `Npgsql.EntityFrameworkCore.PostgreSQL` (v10.0) for production and `Microsoft.EntityFrameworkCore.Sqlite` (v10.0) for local/testing
 
 ---
 
@@ -161,7 +174,7 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, string> {
 
 | Decision | Selection | Status |
 |----------|-----------|--------|
-| Storage Database | SQL Server (dev) + PostgreSQL (prod) + SQLite (test) | ✅ Resolved |
+| Storage Database | PostgreSQL (dev + prod) + SQLite (local + test) | ✅ Resolved |
 | Identity Framework | ASP.NET Core Identity extending IdentityUser/IdentityRole | ✅ Resolved |
 | Auth Endpoints | REST convention: POST /auth/register, POST /auth/login | ✅ Resolved (User input A) |
 | Role Structure | Flat 4 predefined roles (Admin, Manager, Teacher, Student) | ✅ Resolved |

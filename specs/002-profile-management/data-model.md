@@ -229,7 +229,7 @@ Predefined Roles (seeded at migration):
 
 ## EF Core Configuration
 
-**DbContext Setup**:
+**DbContext Setup** (Provider-agnostic):
 ```csharp
 public class ApplicationDbContext : IdentityDbContext<User, Role, string> {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
@@ -245,7 +245,7 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, string> {
         
         modelBuilder.Entity<Role>().HasData(adminRole, managerRole, teacherRole, studentRole);
         
-        // Configure indexes
+        // Configure indexes (provider-agnostic)
         modelBuilder.Entity<User>().HasIndex(u => u.NormalizedEmail).IsUnique();
         modelBuilder.Entity<User>().HasIndex(u => u.CreatedAt);
         modelBuilder.Entity<Role>().HasIndex(r => r.NormalizedName).IsUnique();
@@ -253,14 +253,56 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, string> {
 }
 ```
 
+**Program.cs Configuration** (Environment-specific provider selection):
+```csharp
+// Local Development: SQLite in-memory (no external dependencies)
+if (app.Environment.IsDevelopment()) {
+    services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite("Data Source=:memory:"));
+}
+
+// Production: PostgreSQL with connection string from configuration
+else {
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
+```
+
 ---
 
 ## Migration Strategy
 
-**Initial Migration**: Creates all tables + seed data for roles
-- `AspNetUsers` table
-- `AspNetRoles` table
-- `AspNetUserRoles` table
-- Identity-generated tables (UserClaims, UserLogins, RoleClaims, UserTokens)
+**Database Providers**:
+- **Local Development**: SQLite in-memory database
+  - Zero configuration; auto-created on startup via `context.Database.EnsureCreated()`
+  - Resets on application restart (ideal for rapid development and testing)
+  - No external database required
 
-**Zero-downtime deployment**: Use EF Core Code-First migrations with green-blue deployment or feature flags
+- **Integration Tests**: SQLite file-based (temporary)
+  - Connection string: `Data Source=test_{Guid}.db;`
+  - Cleaned up after test suite completion
+  - Fast test execution; isolated per test
+
+- **Development & Production**: PostgreSQL with code-first migrations
+  - Development: Local PostgreSQL instance (Docker or native)
+  - Production: PostgreSQL via environment variables
+  - Both use identical migration path
+
+**Initial Migration** (PostgreSQL):
+- Command: `dotnet ef migrations add InitialCreate`
+- Creates tables: `AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`
+- Identity framework tables: UserClaims, UserLogins, RoleClaims, UserTokens
+- Seeds predefined roles (Admin, Manager, Teacher, Student)
+- Deploy: `dotnet ef database update`
+
+**Local Development** (SQLite in-memory):
+- No migrations applied; schema created via `EnsureCreated()` on startup
+- Automatic schema recreation on application restart
+- Same `ApplicationDbContext` code; only connection string differs at runtime
+
+**Zero-downtime Deployment** (PostgreSQL production):
+- Use EF Core Code-First migrations with blue-green deployment strategy
+- New schema deployed to standby environment
+- Cutover: switch traffic after verification
+- Rollback: revert traffic to previous database snapshot if issues detected
