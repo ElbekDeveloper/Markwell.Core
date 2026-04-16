@@ -40,6 +40,7 @@ reviews:
   pre_merge_checks:
     docstrings:
       mode: "warn"
+      threshold: 80
 
 chat:
   auto_reply: true
