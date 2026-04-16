@@ -58,17 +58,17 @@ Phases 5 & 6 can run in parallel after US2
 
 ### Setup Tasks
 
-- [ ] T001 Add NuGet packages: `dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL` and `dotnet add package Microsoft.EntityFrameworkCore.Sqlite`
-- [ ] T002 Add xUnit testing package: `dotnet add package xunit` and `dotnet add package xunit.runner.visualstudio`
-- [ ] T003 Add Moq package: `dotnet add package Moq`
-- [ ] T004 Create directory structure: `Markwell.Core/Entities`, `Markwell.Core/Models`, `Markwell.Core/Services`, `Markwell.Core/Brokers`, `Markwell.Core/Configurations`, `Markwell.Core/Data`, `Markwell.Core/Migrations`
-- [ ] T005 Create directory structure for tests: `Tests/Unit/Services`, `Tests/Unit/Controllers`, `Tests/Integration`, `Tests/Fixtures`
-- [ ] T006 Create `Markwell.Core/Data/ApplicationDbContext.cs` inheriting from `IdentityDbContext<User, Role, string>` with DbSet properties for User, Role, UserRole
-- [ ] T007 Update `Program.cs` to register DbContext with provider-agnostic configuration:
+- [X] T001 Add NuGet packages: `dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL` and `dotnet add package Microsoft.EntityFrameworkCore.Sqlite`
+- [X] T002 Add xUnit testing package: `dotnet add package xunit` and `dotnet add package xunit.runner.visualstudio`
+- [X] T003 Add Moq package: `dotnet add package Moq`
+- [X] T004 Create directory structure: `Markwell.Core/Entities`, `Markwell.Core/Models`, `Markwell.Core/Services`, `Markwell.Core/Brokers`, `Markwell.Core/Configurations`, `Markwell.Core/Data`, `Markwell.Core/Migrations`
+- [X] T005 Create directory structure for tests: `Tests/Unit/Services`, `Tests/Unit/Controllers`, `Tests/Integration`, `Tests/Fixtures`
+- [X] T006 Create `Markwell.Core/Data/ApplicationDbContext.cs` inheriting from `IdentityDbContext<User, Role, string>` with DbSet properties for User, Role, UserRole
+- [X] T007 Update `Program.cs` to register DbContext with provider-agnostic configuration:
   - Development: SQLite in-memory (`options.UseSqlite("Data Source=:memory;")`)
   - Production: PostgreSQL from environment variable
-- [ ] T008 Create initial EF Core migration: `dotnet ef migrations add InitialIdentitySchema --project Markwell.Core`
-- [ ] T009 Verify migration creates AspNetUsers, AspNetRoles, AspNetUserRoles, and Identity framework tables
+- [X] T008 Create initial EF Core migration: `dotnet ef migrations add InitialIdentitySchema --project Markwell.Core`
+- [X] T009 Verify migration creates AspNetUsers, AspNetRoles, AspNetUserRoles, and Identity framework tables
 - [ ] T010 Create `Markwell.Core.http` test file for acceptance testing with endpoint examples (placeholder for later)
 
 ---
@@ -85,17 +85,17 @@ Phases 5 & 6 can run in parallel after US2
 
 ### Entity Tasks
 
-- [ ] T011 Create `Markwell.Core/Entities/User.cs` extending `IdentityUser<string>` with properties:
+- [X] T011 Create `Markwell.Core/Entities/User.cs` extending `IdentityUser<string>` with properties:
   - `FullName: string`
   - `CreatedAt: DateTime`
   - `UpdatedAt: DateTime?`
   - `LastLoginAt: DateTime?`
   - `IsActive: bool`
   - `UserRoles: ICollection<UserRole>`
-- [ ] T012 Create `Markwell.Core/Entities/Role.cs` extending `IdentityRole<string>` with properties:
+- [X] T012 Create `Markwell.Core/Entities/Role.cs` extending `IdentityRole<string>` with properties:
   - `CreatedAt: DateTime`
   - `UserRoles: ICollection<UserRole>`
-- [ ] T013 Create `Markwell.Core/Entities/UserRole.cs` as junction table with properties:
+- [X] T013 Create `Markwell.Core/Entities/UserRole.cs` as junction table with properties:
   - `UserId: string` (FK)
   - `RoleId: string` (FK)
   - `AssignedAt: DateTime`
@@ -117,39 +117,39 @@ Phases 5 & 6 can run in parallel after US2
 
 ### Model (DTO) Tasks
 
-- [ ] T017 Create `Markwell.Core/Models/RegisterRequest.cs` with Email, Password, FullName properties
-- [ ] T018 Create `Markwell.Core/Models/LoginRequest.cs` with Email, Password properties
-- [ ] T019 Create `Markwell.Core/Models/UserResponse.cs` with Id, Email, UserName, FullName, EmailConfirmed, IsActive, Roles, CreatedAt, UpdatedAt, LastLoginAt
-- [ ] T020 Create `Markwell.Core/Models/UpdateProfileRequest.cs` with FullName, Email, PhoneNumber properties (all optional)
-- [ ] T021 Create `Markwell.Core/Models/ChangePasswordRequest.cs` with CurrentPassword, NewPassword properties
-- [ ] T022 Create `Markwell.Core/Models/RoleAssignmentRequest.cs` with RoleName property
-- [ ] T023 Create `Markwell.Core/Models/CreateUserRequest.cs` with Email, FullName, RoleName properties
+- [X] T017 Create `Markwell.Core/Models/RegisterRequest.cs` with Email, Password, FullName properties
+- [X] T018 Create `Markwell.Core/Models/LoginRequest.cs` with Email, Password properties
+- [X] T019 Create `Markwell.Core/Models/UserResponse.cs` with Id, Email, UserName, FullName, EmailConfirmed, IsActive, Roles, CreatedAt, UpdatedAt, LastLoginAt
+- [X] T020 Create `Markwell.Core/Models/UpdateProfileRequest.cs` with FullName, Email, PhoneNumber properties (all optional)
+- [X] T021 Create `Markwell.Core/Models/ChangePasswordRequest.cs` with CurrentPassword, NewPassword properties
+- [X] T022 Create `Markwell.Core/Models/RoleAssignmentRequest.cs` with RoleName property
+- [X] T023 Create `Markwell.Core/Models/CreateUserRequest.cs` with Email, FullName, RoleName properties
 
 ### Service Layer Tasks
 
-- [ ] T024 Create `Markwell.Core/Services/PasswordValidationService.cs` with method:
+- [X] T024 Create `Markwell.Core/Services/PasswordValidationService.cs` with method:
   - `ValidatePassword(password: string): bool` — returns true if meets requirements (min 8, upper, lower, digit, special)
   - `GetPasswordStrengthMessage(password: string): string` — returns error message if invalid
-- [ ] T025 Create `Markwell.Core/Services/EmailVerificationService.cs` with methods:
+- [X] T025 Create `Markwell.Core/Services/EmailVerificationService.cs` with methods:
   - `GenerateVerificationToken(user: User): Task<string>` 
   - `ConfirmEmailAsync(user: User, token: string): Task<IdentityResult>`
 
 ### Broker Layer Tasks
 
-- [ ] T026 Create `Markwell.Core/Brokers/IdentityBroker.cs` with constructor injection of `UserManager<User>`, `RoleManager<Role>`, `SignInManager<User>` and methods:
+- [X] T026 Create `Markwell.Core/Brokers/IdentityBroker.cs` with constructor injection of `UserManager<User>`, `RoleManager<Role>`, `SignInManager<User>` and methods:
   - `CreateUserAsync(user: User, password: string): Task<IdentityResult>`
   - `FindUserByEmailAsync(email: string): Task<User?>`
   - `UpdateUserAsync(user: User): Task<IdentityResult>`
   - `DeleteUserAsync(user: User): Task<IdentityResult>`
   - `ChangePasswordAsync(user: User, currentPassword: string, newPassword: string): Task<IdentityResult>`
   - `SignInAsync(user: User, password: string): Task<SignInResult>`
-- [ ] T027 Create `Markwell.Core/Brokers/UserBroker.cs` with constructor injection of `ApplicationDbContext` and methods:
+- [X] T027 Create `Markwell.Core/Brokers/UserBroker.cs` with constructor injection of `ApplicationDbContext` and methods:
   - `GetUserByIdAsync(userId: string): Task<User?>`
   - `GetUserWithRolesAsync(userId: string): Task<User?>`
   - `UpdateUserAsync(user: User): Task<void>`
   - `GetAllUsersAsync(pageNumber: int, pageSize: int): Task<(List<User>, int totalCount)>`
   - `SearchUsersByEmailAsync(searchTerm: string, pageNumber: int, pageSize: int): Task<(List<User>, int totalCount)>`
-- [ ] T028 Create `Markwell.Core/Brokers/RoleBroker.cs` with constructor injection of `ApplicationDbContext` and methods:
+- [X] T028 Create `Markwell.Core/Brokers/RoleBroker.cs` with constructor injection of `ApplicationDbContext` and methods:
   - `GetRoleByNameAsync(roleName: string): Task<Role?>`
   - `GetAllRolesAsync(): Task<List<Role>>`
   - `AssignRoleAsync(userId: string, roleId: string, assignedBy: string?): Task<void>`
@@ -158,17 +158,17 @@ Phases 5 & 6 can run in parallel after US2
 
 ### Application Service Tasks
 
-- [ ] T029 Update `Program.cs` to register Identity services:
+- [X] T029 Update `Program.cs` to register Identity services:
   - `services.AddIdentity<User, Role>(options => { /* IdentityConfiguration */ })`
   - `services.AddScoped<IdentityBroker>()`
   - `services.AddScoped<UserBroker>()`
   - `services.AddScoped<RoleBroker>()`
   - `services.AddScoped<PasswordValidationService>()`
   - `services.AddScoped<EmailVerificationService>()`
-- [ ] T030 Update `Program.cs` to add authentication middleware:
+- [X] T030 Update `Program.cs` to add authentication middleware:
   - `app.UseAuthentication()`
   - `app.UseAuthorization()`
-- [ ] T031 Apply EF Core migration: `dotnet ef database update`
+- [X] T031 Apply EF Core migration: `dotnet ef database update`
 
 ---
 

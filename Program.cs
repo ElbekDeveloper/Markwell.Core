@@ -38,12 +38,28 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Register services and brokers
+// Register brokers
 builder.Services.AddScoped<IdentityBroker>();
 builder.Services.AddScoped<UserBroker>();
 builder.Services.AddScoped<RoleBroker>();
+
+// Register common services
 builder.Services.AddScoped<PasswordValidationService>();
 builder.Services.AddScoped<EmailVerificationService>();
+
+// Register business services
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<AuthenticationService>();
+
+// Register orchestration service
+builder.Services.AddScoped<ProfileManagementOrchestrationService>();
+
+// Add logging
+builder.Services.AddLogging();
+
+// Add controllers
+builder.Services.AddControllers();
 
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
@@ -63,6 +79,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map controller routes
+app.MapControllers();
 
 app.MapGet("/health", () => new
 {
