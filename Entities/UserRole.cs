@@ -5,14 +5,10 @@ namespace Markwell.Core.Entities;
 /// <summary>
 /// UserRole entity for managing user-role assignments.
 /// Extends IdentityUserRole to track assignment metadata.
+/// Uses the composite primary key (UserId, RoleId) inherited from IdentityUserRole.
 /// </summary>
 public class UserRole : IdentityUserRole<string>
 {
-    /// <summary>
-    /// Gets or sets the unique identifier for this user-role assignment.
-    /// </summary>
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-
     /// <summary>
     /// Gets or sets when this role was assigned to the user.
     /// </summary>

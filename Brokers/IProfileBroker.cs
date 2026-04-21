@@ -55,6 +55,7 @@ public interface IProfileBroker
 
     /// <summary>Updates an existing role.</summary>
     /// <exception cref="Microsoft.EntityFrameworkCore.DbUpdateException">On constraint violation or entity not found</exception>
+    /// <exception cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException">On ConcurrencyStamp mismatch</exception>
     Task<Role> UpdateRoleAsync(Role role);
 
     /// <summary>Deletes a role by ID.</summary>

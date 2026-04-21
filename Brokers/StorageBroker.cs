@@ -11,21 +11,11 @@ namespace Markwell.Core.Brokers;
 /// Inherits from IdentityDbContext to manage User, Role, and UserRole entities with ASP.NET Identity.
 /// Supports SQLite (development) and PostgreSQL (production).
 /// </summary>
-public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserClaim<string>, UserRole, IdentityUserLogin<string>, IdentityRoleClaim<string>, IdentityUserToken<string>>
+public class StorageBroker(DbContextOptions<StorageBroker> options, IConfiguration configuration)
+    : IdentityDbContext<User, Role, string, IdentityUserClaim<string>, UserRole, IdentityUserLogin<string>, IdentityRoleClaim<string>, IdentityUserToken<string>>(options)
 {
-    private readonly IConfiguration _configuration;
-    private readonly string _connectionString;
-
-    /// <summary>
-    /// Initializes a new instance of the StorageBroker class.
-    /// </summary>    /// <param name="options">The database context options</param>
-    /// <param name="configuration">The application configuration</param>
-    public StorageBroker(IConfiguration configuration)
-    {
-        _configuration = configuration;
-        _connectionString = _configuration.GetConnectionString("DefaultConnection") 
-            ?? "Data Source=markwell.db";
-    }
+    private readonly string _connectionString =
+        configuration.GetConnectionString("DefaultConnection") ?? "Data Source=markwell.db";
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -33,15 +23,11 @@ public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserC
         if (!optionsBuilder.IsConfigured)
         {
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-            
+
             if (environment == "Production")
-            {
                 optionsBuilder.UseNpgsql(_connectionString);
-            }
             else
-            {
                 optionsBuilder.UseSqlite(_connectionString);
-            }
         }
     }
 
@@ -49,7 +35,6 @@ public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserC
     {
         base.OnModelCreating(builder);
 
-        // Configure UserRole as junction table
         builder.Entity<UserRole>()
             .HasOne(ur => ur.User)
             .WithMany(u => u.UserRoles)
@@ -71,9 +56,11 @@ public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserC
     /// <typeparam name="T">The entity type (must be a class)</typeparam>
     /// <param name="entity">The entity instance to insert</param>
     /// <returns>The inserted entity with generated Id and ConcurrencyStamp</returns>
+    /// <exception cref="ArgumentNullException">If entity is null</exception>
     /// <exception cref="DbUpdateException">On constraint violation or database error</exception>
     public async Task<T> InsertAsync<T>(T entity) where T : class
     {
+        ArgumentNullException.ThrowIfNull(entity);
         Add(entity);
         await SaveChangesAsync();
         return entity;
@@ -85,20 +72,16 @@ public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserC
     /// <typeparam name="T">The entity type</typeparam>
     /// <returns>IQueryable of all entities; supports further filtering/ordering</returns>
     public IQueryable<T> Select<T>() where T : class
-    {
-        return Set<T>();
-    }
+        => Set<T>();
 
     /// <summary>
-    /// Retrieves a single entity by its ID.
+    /// Retrieves a single entity by its string ID.
     /// </summary>
     /// <typeparam name="T">The entity type</typeparam>
     /// <param name="id">The entity ID</param>
     /// <returns>Entity if found; null otherwise</returns>
     public async Task<T?> SelectByIdAsync<T>(string id) where T : class
-    {
-        return await Set<T>().FindAsync(id);
-    }
+        => await Set<T>().FindAsync(id);
 
     /// <summary>
     /// Updates an existing entity in the database.
@@ -106,10 +89,12 @@ public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserC
     /// <typeparam name="T">The entity type</typeparam>
     /// <param name="entity">The entity with updated values</param>
     /// <returns>The updated entity</returns>
+    /// <exception cref="ArgumentNullException">If entity is null</exception>
     /// <exception cref="DbUpdateException">On constraint violation or entity not found</exception>
     /// <exception cref="DbUpdateConcurrencyException">On ConcurrencyStamp mismatch</exception>
     public async Task<T> UpdateAsync<T>(T entity) where T : class
     {
+        ArgumentNullException.ThrowIfNull(entity);
         Update(entity);
         await SaveChangesAsync();
         return entity;
@@ -123,11 +108,24 @@ public class StorageBroker : IdentityDbContext<User, Role, string, IdentityUserC
     /// <exception cref="DbUpdateException">If entity not found</exception>
     public async Task DeleteAsync<T>(string id) where T : class
     {
-        var entity = await SelectByIdAsync<T>(id);
-        if (entity != null)
-        {
-            Remove(entity);
-            await SaveChangesAsync();
-        }
+        var entity = await SelectByIdAsync<T>(id)
+            ?? throw new DbUpdateException($"Entity of type {typeof(T).Name} with id '{id}' was not found.");
+        Remove(entity);
+        await SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Removes a tracked entity instance directly from the database.
+    /// Use this for entities with composite primary keys (e.g., UserRole).
+    /// </summary>
+    /// <typeparam name="T">The entity type</typeparam>
+    /// <param name="entity">The entity instance to remove</param>
+    /// <exception cref="ArgumentNullException">If entity is null</exception>
+    /// <exception cref="DbUpdateException">On database error</exception>
+    public async Task RemoveAsync<T>(T entity) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        Remove(entity);
+        await SaveChangesAsync();
     }
 }

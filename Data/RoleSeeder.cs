@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Markwell.Core.Brokers;
 using Markwell.Core.Entities;
 
@@ -10,27 +11,37 @@ namespace Markwell.Core.Data;
 /// </summary>
 public static class RoleSeeder
 {
+    private static readonly Role[] PredefinedRoles =
+    [
+        new Role { Id = "admin",   Name = "Admin",   NormalizedName = "ADMIN",   Description = "System administrator with full permissions" },
+        new Role { Id = "manager", Name = "Manager", NormalizedName = "MANAGER", Description = "Manager role for organizational oversight" },
+        new Role { Id = "teacher", Name = "Teacher", NormalizedName = "TEACHER", Description = "Educator role for instructional content" },
+        new Role { Id = "student", Name = "Student", NormalizedName = "STUDENT", Description = "Student role for learning activities" }
+    ];
+
     /// <summary>
     /// Seeds predefined roles into the database if they don't already exist.
+    /// Runs inside a transaction to guard against concurrent startup races.
     /// </summary>
     /// <param name="storageBroker">The storage broker for persisting roles</param>
     public static async Task SeedRolesAsync(StorageBroker storageBroker)
     {
-        var predefinedRoles = new[]
-        {
-            new Role { Id = "admin", Name = "Admin", NormalizedName = "ADMIN", Description = "System administrator with full permissions" },
-            new Role { Id = "manager", Name = "Manager", NormalizedName = "MANAGER", Description = "Manager role for organizational oversight" },
-            new Role { Id = "teacher", Name = "Teacher", NormalizedName = "TEACHER", Description = "Educator role for instructional content" },
-            new Role { Id = "student", Name = "Student", NormalizedName = "STUDENT", Description = "Student role for learning activities" }
-        };
+        await using var transaction = await storageBroker.Database.BeginTransactionAsync();
 
-        foreach (var role in predefinedRoles)
+        try
         {
-            var existingRole = await storageBroker.SelectByIdAsync<Role>(role.Id);
-            if (existingRole == null)
+            foreach (var role in PredefinedRoles)
             {
-                await storageBroker.InsertAsync(role);
+                var existing = await storageBroker.SelectByIdAsync<Role>(role.Id);
+                if (existing is null)
+                    await storageBroker.InsertAsync(role);
             }
+
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
         }
     }
 }
