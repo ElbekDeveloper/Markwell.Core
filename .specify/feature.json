@@ -1,7 +1,7 @@
 {
-  "feature_directory": "specs/003-storage-broker-integration",
-  "feature_name": "Generic Storage Broker Integration",
-  "feature_num": 3,
-  "git_branch": "003-storage-broker-integration",
-  "created_at": "2026-04-17T00:00:00Z"
+  "feature_directory": "specs/004-entity-folder-structure",
+  "feature_name": "Entity Folder Structure Reorganization",
+  "feature_num": 4,
+  "git_branch": "004-entity-folder-structure",
+  "created_at": "2026-04-22T00:00:00Z"
 }
