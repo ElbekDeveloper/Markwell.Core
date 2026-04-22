@@ -67,6 +67,25 @@ No layer may skip or bypass another. Dependencies flow in one direction: Control
 - Spec-kit workflow (specify → plan → tasks → implement) MUST be followed for every non-trivial feature.
 - Branch naming follows spec-kit sequential convention: `feature/<sequential-number>-<description>`.
 
+### Spec Synchronization (Docs-First Discipline)
+
+Specs are the source of truth. Any clarification, architectural correction, or bug fix discussed in chat MUST be reflected in the relevant spec document **before** implementation or code changes begin. This is non-negotiable.
+
+Agents reading and implementing from specs MUST apply this rule:
+
+1. **When a clarification changes a design decision** — update `spec.md` (requirements, key entities, assumptions) immediately, then proceed.
+2. **When a bug or code review finding invalidates a spec section** — update the affected document(s) (`spec.md`, `plan.md`, `data-model.md`, `contracts/*.md`, `quickstart.md`) to reflect the correct design before writing any code.
+3. **When implementation diverges from the spec** (e.g., merging two classes into one, changing method signatures, swapping a dependency) — the spec is wrong, not the code. Correct the spec, then align code to the corrected spec.
+4. **After any PR review** — CodeRabbit or human review comments that reveal spec drift MUST be incorporated into the spec documents as part of the same feature branch before merge.
+
+The spec documents that must be kept in sync are:
+- `spec.md` — requirements, key entities, functional rules
+- `plan.md` — architecture summary, project structure
+- `data-model.md` — entity shapes, broker structure, DI registration, data flow
+- `contracts/*.md` — interface signatures, exception contracts, usage examples
+- `quickstart.md` — setup and usage code snippets
+- `tasks.md` — method names and references must match implementation
+
 ### Git Commit & PR Discipline
 
 Direct commits to `master` are STRICTLY FORBIDDEN. Every change — no matter how small — MUST follow this sequence:
@@ -87,4 +106,4 @@ This constitution supersedes all other coding guidance. Amendments require:
 
 All PRs and code reviews MUST verify compliance with the principles above.
 
-**Version**: 1.1.0 | **Ratified**: 2026-04-16 | **Last Amended**: 2026-04-16
+**Version**: 1.2.0 | **Ratified**: 2026-04-16 | **Last Amended**: 2026-04-22

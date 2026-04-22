@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        ".specify/scripts/powershell/git-feature.ps1": true,
+        ".specify/scripts/powershell/check-prerequisites.ps1": true,
+        "dotnet add": true,
+        "git rev-parse": true,
+        "Test-Path": true
+    }
+}

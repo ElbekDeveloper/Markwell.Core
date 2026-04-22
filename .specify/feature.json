@@ -1,3 +1,7 @@
 {
-  "feature_directory": "specs/001-aspnet-webapi-setup"
+  "feature_directory": "specs/003-storage-broker-integration",
+  "feature_name": "Generic Storage Broker Integration",
+  "feature_num": 3,
+  "git_branch": "003-storage-broker-integration",
+  "created_at": "2026-04-17T00:00:00Z"
 }

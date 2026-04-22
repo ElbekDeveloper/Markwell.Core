@@ -7,7 +7,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(gh pr create --title 'chore: apply CodeRabbit best-practice configuration' --body ' *)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(python3)",
+      "Bash(grep -o '\"path\":\"[^\"]*\",\"commit_id\":\"[^\"]*\",\"original_commit_id\":\"[^\"]*\",\"user\":\\\\{\"login\":\"coderabbitai' \"C:\\\\Users\\\\elbek.normurodov\\\\.claude\\\\projects\\\\c--Users-elbek-normurodov-Desktop-try3-Markwell-Core\\\\65133255-e59d-495e-8704-38ac97c8d840\\\\tool-results\\\\bozj25vja.txt\")",
+      "Bash(grep -v '^$')"
     ]
   }
 }
