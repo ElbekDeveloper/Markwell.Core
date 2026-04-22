@@ -102,7 +102,6 @@ StorageBroker CRUD methods throw exceptions in these scenarios:
 |-----------|-----------|----------|
 | DbUpdateException | Insert, Update, Delete | Constraint violation, database error, entity not found (Update/Delete) |
 | DbUpdateConcurrencyException | Update | ConcurrencyStamp mismatch (another request modified entity) |
-| ArgumentNullException | Constructor | IConfiguration or DbContext not injected |
 
 ### Service Responsibility
 
@@ -270,38 +269,40 @@ public class User
 
 ---
 
-## IConfiguration Injection
+## StorageBroker Constructor & Configuration
+
+### Design Clarification
+
+`StorageBroker` **is** the `IdentityDbContext` — there is no separate `ApplicationDbContext` class. The constructor accepts `DbContextOptions<StorageBroker>` (standard EF Core pattern). Provider selection (SQLite vs PostgreSQL) is the responsibility of `Program.cs`, not of the class itself.
 
 ### StorageBroker Constructor
 
 ```csharp
-public class StorageBroker
+public class StorageBroker : IdentityDbContext<User, Role, string,
+    IdentityUserClaim<string>, UserRole, IdentityUserLogin<string>,
+    IdentityRoleClaim<string>, IdentityUserToken<string>>
 {
-    private readonly ApplicationDbContext _dbContext;
-
-    public StorageBroker(ApplicationDbContext dbContext)
-    {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-    }
+    public StorageBroker(DbContextOptions<StorageBroker> options)
+        : base(options) { }
 }
 ```
 
-### Configuration Pattern
-
-Configuration is handled by `ApplicationDbContext.OnConfiguring()`:
+### Configuration Pattern (Program.cs)
 
 ```csharp
-public class ApplicationDbContext : IdentityDbContext<User, Role, string>
-{
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseSqlite("Data Source=MarkwellCore.db");
-        }
-    }
-}
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddDbContext<StorageBroker>(o => o.UseSqlite(connectionString));
+else
+    builder.Services.AddDbContext<StorageBroker>(o => o.UseNpgsql(connectionString));
+
+builder.Services.AddIdentityCore<User>()
+    .AddRoles<Role>()
+    .AddEntityFrameworkStores<StorageBroker>();
 ```
+
+> **Note**: `ArgumentNullException` is NOT thrown by the constructor — `DbContextOptions` is guaranteed non-null by the DI framework. The old entry in the exception table below referencing constructor injection is removed.
 
 ---
 
@@ -450,8 +451,9 @@ Every implementation of IStorageBroker MUST pass these contract tests:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-04-17 | Initial contract definition (5 CRUD methods, string IDs, generics) |
+| 1.1.0 | 2026-04-22 | Corrected StorageBroker design: IS the IdentityDbContext, not a wrapper. Removed ApplicationDbContext. Corrected constructor to DbContextOptions<StorageBroker>. Removed ArgumentNullException from exception table. ProfileBroker now uses UserManager/RoleManager for mutations. |
 
-**Current Version**: 1.0.0 (Stable)
+**Current Version**: 1.1.0 (Corrected)
 
 ---
 
@@ -459,29 +461,31 @@ Every implementation of IStorageBroker MUST pass these contract tests:
 
 ### StorageBroker CRUD Implementation
 - ✅ All 5 generic CRUD methods implemented (Insert, Select, SelectById, Update, Delete)
+- ✅ `StorageBroker` inherits `IdentityDbContext<...>` — no separate `ApplicationDbContext`
+- ✅ Constructor accepts `DbContextOptions<StorageBroker>` (standard EF Core pattern)
+- ✅ Provider selection (SQLite/PostgreSQL) done in `Program.cs`, not inside the class
 - ✅ Generic type constraint `where T : class` enforced
 - ✅ InsertAsync returns entity with Id + ConcurrencyStamp
-- ✅ SelectByIdAsync returns nullable (T?) allowing null return
+- ✅ SelectByIdAsync returns nullable (T?) — note: fails for composite-key entities (document limitation)
 - ✅ UpdateAsync throws if entity not found (not null-safe)
-- ✅ DeleteAsync throws if entity not found
+- ✅ DeleteAsync throws if entity not found (must not silently no-op)
 - ✅ Select returns IQueryable supporting LINQ and deferred execution
 - ✅ Exception handling follows contract (DbUpdateException, DbUpdateConcurrencyException)
-- ✅ Takes ApplicationDbContext in constructor (configuration via OnConfiguring)
 
 ### IProfileBroker Interface
 - ✅ Domain-specific broker interface for profile operations
-- ✅ All 19 profile operations defined (user, role, assignment CRUD + queries)
+- ✅ All profile operations defined (user, role, assignment CRUD + queries)
 - ✅ Read methods (Get*) return nullable or empty (never throw)
-- ✅ Write methods (Create*, Update*, Delete*, Assign*, Remove*) throw on error
+- ✅ Write methods (Create*, Update*, Delete*, Assign*, Remove*) report errors via IdentityResult or throw
 - ✅ Update methods throw DbUpdateConcurrencyException on ConcurrencyStamp mismatch
 - ✅ All methods documented with XML docs
-- ✅ Exception handling specified in XML docs
 
 ### ProfileBroker Implementation
 - ✅ Implements IProfileBroker interface
-- ✅ Wraps StorageBroker for all CRUD operations
-- ✅ All profile methods implemented
-- ✅ Predefined roles (Admin, Manager, Teacher, Student) supported
-- ✅ Business logic for role assignment included
+- ✅ Injects `UserManager<User>` — all user mutations (create/update/delete) go through it
+- ✅ Injects `RoleManager<Role>` — all role mutations go through it
+- ✅ Injects `StorageBroker` — used only for read queries and `UserRole` custom columns
+- ✅ MUST NOT call `StorageBroker.InsertAsync<User>` or `UpdateAsync<User>` directly
+- ✅ Predefined roles seeded via `RoleManager.CreateAsync`, not raw EF insert
 
-**Status**: ✅ **CONTRACT READY FOR IMPLEMENTATION**
+**Status**: ✅ **CONTRACT CORRECTED — READY FOR IMPLEMENTATION**

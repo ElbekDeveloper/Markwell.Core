@@ -37,36 +37,38 @@ Relationships:
 
 ## StorageBroker Configuration
 
-### Configuration via DbContext
+### Design: Single Class, Not a Wrapper
 
-Configuration is handled by `ApplicationDbContext.OnConfiguring()`:
+`StorageBroker` **is** the DbContext — it inherits directly from `IdentityDbContext<User, Role, string, ...>`. There is no separate `ApplicationDbContext`. The provider (SQLite for development, PostgreSQL for production) is selected in `Program.cs` via `AddDbContext<StorageBroker>()`, not inside the class.
+
+### StorageBroker Class Shape
 
 ```csharp
-public class ApplicationDbContext : IdentityDbContext<User, Role, string>
+public class StorageBroker : IdentityDbContext<User, Role, string,
+    IdentityUserClaim<string>, UserRole, IdentityUserLogin<string>,
+    IdentityRoleClaim<string>, IdentityUserToken<string>>
 {
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        // Configuration string validation happens here
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseSqlite("Data Source=MarkwellCore.db");
-        }
-    }
+    public StorageBroker(DbContextOptions<StorageBroker> options)
+        : base(options) { }
+
+    // Generic CRUD methods (InsertAsync, Select, SelectByIdAsync, UpdateAsync, DeleteAsync, RemoveAsync)
+    // OnModelCreating: configures UserRole composite PK and FK relationships
 }
 ```
 
-### StorageBroker Constructor
+### DI Registration in Program.cs
 
 ```csharp
-public class StorageBroker
-{
-    private readonly ApplicationDbContext _dbContext;
+// Provider selection lives here, not inside StorageBroker
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-    public StorageBroker(ApplicationDbContext dbContext)
-    {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-    }
-}
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddDbContext<StorageBroker>(o => o.UseSqlite(connectionString));
+else
+    builder.Services.AddDbContext<StorageBroker>(o => o.UseNpgsql(connectionString));
+
+// No separate AddScoped<StorageBroker>() — AddDbContext handles registration
+builder.Services.AddScoped<IProfileBroker, ProfileBroker>();
 ```
 
 ### Behavior
@@ -122,57 +124,64 @@ public interface IProfileBroker
 }
 ```
 
-### StorageBroker: Generic CRUD Implementation
+### StorageBroker: Generic CRUD Implementation (is the DbContext)
 
-**Purpose**: Provides generic CRUD operations for all entity types.  
-**Responsibility**: Entity persistence, exception handling, concurrency control.
+**Purpose**: Provides generic CRUD operations for all entity types AND is the EF Core DbContext.  
+**Responsibility**: Entity persistence, exception handling, concurrency control, schema configuration.
 
 ```csharp
-public class StorageBroker
+public class StorageBroker : IdentityDbContext<User, Role, string, ...>
 {
-    private readonly ApplicationDbContext _dbContext;
+    public StorageBroker(DbContextOptions<StorageBroker> options) : base(options) { }
 
-    public StorageBroker(ApplicationDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
-
-    // Generic CRUD Operations (with exception handling)
+    // Generic CRUD Operations
     public Task<T> InsertAsync<T>(T entity) where T : class { /* implementation */ }
     public IQueryable<T> Select<T>() where T : class { /* implementation */ }
     public Task<T?> SelectByIdAsync<T>(string id) where T : class { /* implementation */ }
     public Task<T> UpdateAsync<T>(T entity) where T : class { /* implementation */ }
     public Task DeleteAsync<T>(string id) where T : class { /* implementation */ }
+    public Task RemoveAsync<T>(T entity) where T : class { /* implementation */ }
 }
 ```
 
 ### ProfileBroker: User & Role Profile Implementation
 
 **Purpose**: Domain-specific broker implementing IProfileBroker.  
-**Responsibility**: User, role, and profile operations with business logic.
+**Responsibility**: User and role mutations via `UserManager`/`RoleManager`; queries and custom `UserRole` columns via `StorageBroker`.
 
 ```csharp
 public class ProfileBroker : IProfileBroker
 {
-    private readonly StorageBroker _storageBroker;
+    private readonly UserManager<User> _userManager;
+    private readonly RoleManager<Role> _roleManager;
+    private readonly StorageBroker _storageBroker; // read queries + UserRole custom columns only
 
-    public ProfileBroker(StorageBroker storageBroker)
+    public ProfileBroker(
+        UserManager<User> userManager,
+        RoleManager<Role> roleManager,
+        StorageBroker storageBroker)
     {
+        _userManager = userManager;
+        _roleManager = roleManager;
         _storageBroker = storageBroker;
     }
 
-    // User Operations (delegates to StorageBroker + business logic)
-    public async Task<User> CreateUserAsync(User user)
-        => await _storageBroker.InsertAsync(user);
+    // Mutations go through Identity managers — password hashing, normalization, stamps
+    public async Task<IdentityResult> CreateUserAsync(User user, string password)
+        => await _userManager.CreateAsync(user, password);
 
-    public async Task<User?> GetUserByIdAsync(string userId)
-        => await _storageBroker.SelectByIdAsync<User>(userId);
+    public async Task<IdentityResult> CreateRoleAsync(Role role)
+        => await _roleManager.CreateAsync(role);
 
+    // Read queries use StorageBroker (EF IQueryable)
     public async Task<User?> GetUserByEmailAsync(string email)
         => await _storageBroker.Select<User>()
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.NormalizedEmail == email.ToUpperInvariant());
 
-    // ... other profile operations
+    // Custom UserRole columns (AssignedBy, AssignedOn) also use StorageBroker
+    public async Task AssignRoleToUserAsync(string userId, string roleId, string assignedByUserId)
+    { /* idempotent insert via _storageBroker */ }
 }
 ```
 
@@ -409,16 +418,20 @@ public StorageBroker(ApplicationDbContext dbContext, IConfiguration configuratio
 ### Program.cs Service Registration
 
 ```csharp
-// DbContext registration
-services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=MarkwellCore.db")
-);
+// StorageBroker IS the DbContext — register once with AddDbContext, not AddScoped
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddDbContext<StorageBroker>(o => o.UseSqlite(connectionString));
+else
+    builder.Services.AddDbContext<StorageBroker>(o => o.UseNpgsql(connectionString));
 
-// Generic CRUD implementation
-services.AddScoped<StorageBroker>();
+// Identity (registers UserManager<User>, RoleManager<Role>, SignInManager<User>)
+builder.Services.AddIdentityCore<User>()
+    .AddRoles<Role>()
+    .AddEntityFrameworkStores<StorageBroker>();
 
-// Profile-specific broker (user, role, profile operations)
-services.AddScoped<IProfileBroker, ProfileBroker>();
+// Profile broker (mutates via UserManager/RoleManager, queries via StorageBroker)
+builder.Services.AddScoped<IProfileBroker, ProfileBroker>();
 ```
 
 ### Service Consumption Pattern
@@ -461,11 +474,10 @@ HTTP Request
  Business Service (UserService)
      ↓
  Profile Broker (IProfileBroker → ProfileBroker)
-     ↓
- Generic CRUD (StorageBroker)
-     ↓
- ApplicationDbContext
-     ↓
+     ↓ (mutations)               ↓ (queries / UserRole custom cols)
+ UserManager<User>          StorageBroker : IdentityDbContext
+ RoleManager<Role>                     ↓
+     ↓                        Database (SQLite/PostgreSQL)
  Database (SQLite/PostgreSQL)
      ↓
  HTTP Response
@@ -480,15 +492,18 @@ HTTP Request
    ↓
 2. CreateUserAsync(CreateUserRequest) (ProfileManagementOrchestrationService)
    ↓
-3. CreateUserAsync(user, createdByUserId) (UserService)
+3. CreateUserAsync(user, password) (UserService)
    ↓
-4. InsertAsync<User>(user) (StorageBroker)
+4. _userManager.CreateAsync(user, password) (ProfileBroker)
    ↓
-5. _dbContext.Users.AddAsync(user); SaveChangesAsync()
+5. Identity pipeline: hash password, normalize email/username,
+   set SecurityStamp, ConcurrencyStamp, run validators
    ↓
-6. Database INSERT INTO [Users] ...
+6. UserManager calls SaveChangesAsync() via EF Core
    ↓
-7. Return user with generated Id, ConcurrencyStamp
+7. Database INSERT INTO [AspNetUsers] ...
+   ↓
+8. Return IdentityResult (success/failure with errors)
 ```
 
 ---
@@ -507,17 +522,17 @@ HTTP Request
 ## Design Verification Checklist
 
 - ✅ IProfileBroker interface: Defines all user, role, and profile operations
-- ✅ StorageBroker: Generic CRUD implementation with exception handling
+- ✅ StorageBroker: IS the IdentityDbContext — no separate ApplicationDbContext
+- ✅ StorageBroker: Accepts `DbContextOptions<StorageBroker>`, provider configured in Program.cs
 - ✅ ProfileBroker: Single domain-specific broker implementing IProfileBroker
-- ✅ ProfileBroker wraps StorageBroker to provide all profile operations
+- ✅ ProfileBroker: Uses `UserManager<User>` for user mutations (password hash, normalization, stamps)
+- ✅ ProfileBroker: Uses `RoleManager<Role>` for role mutations (normalization, validation)
+- ✅ ProfileBroker: Uses `StorageBroker` only for read queries and custom `UserRole` columns
 - ✅ One interface per broker rule enforced (IProfileBroker + ProfileBroker)
-- ✅ Configuration handled by ApplicationDbContext.OnConfiguring()
-- ✅ DI registration: StorageBroker, IProfileBroker → ProfileBroker
-- ✅ Predefined roles (Admin, Manager, Teacher, Student) supported via ProfileBroker
+- ✅ DI registration: `AddDbContext<StorageBroker>`, Identity, `IProfileBroker → ProfileBroker`
+- ✅ No redundant `AddScoped<StorageBroker>()` — `AddDbContext` handles it
+- ✅ Predefined roles seeded via `RoleManager` (not raw EF insert)
 - ✅ Scoped lifetime ensures thread-safe DbContext usage per request
 - ✅ Constitution principles verified (layering, naming, method design)
-- ✅ Exception handling: StorageBroker throws DbUpdateException, services handle
-- ✅ No broker created without interface (IProfileBroker + ProfileBroker)
-- ✅ No InitializeAsync needed — DbContext.OnConfiguring() handles configuration
 
-**Status**: ✅ **DESIGN READY FOR TASK GENERATION**
+**Status**: ✅ **DESIGN CORRECTED — READY FOR IMPLEMENTATION**
